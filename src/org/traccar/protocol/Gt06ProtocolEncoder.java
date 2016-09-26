@@ -26,7 +26,7 @@ import org.traccar.model.Command;
 
 public class Gt06ProtocolEncoder extends BaseProtocolEncoder {
   
-  private ChannelBuffer encodeContent(String content) {
+  public static ChannelBuffer encodeContent(String content) {
     
     ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
     
@@ -57,9 +57,9 @@ public class Gt06ProtocolEncoder extends BaseProtocolEncoder {
     
     switch (command.getType()) {
     case Command.TYPE_ENGINE_STOP:
-      return encodeContent("Relay,1#");
+      return Gt06ProtocolEncoder.encodeContent("Relay,1#");
     case Command.TYPE_ENGINE_RESUME:
-      return encodeContent("Relay,0#");
+      return Gt06ProtocolEncoder.encodeContent("Relay,0#");
     default:
       Log.warning(new UnsupportedOperationException(command.getType()));
       break;

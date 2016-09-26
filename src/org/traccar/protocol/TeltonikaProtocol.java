@@ -15,10 +15,12 @@
  */
 package org.traccar.protocol;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.traccar.BaseProtocol;
 import org.traccar.TrackerServer;
@@ -54,6 +56,41 @@ public class TeltonikaProtocol extends BaseProtocol {
       }
     });
     
+  }
+  
+  public static String readCommandText(ChannelBuffer channelBuffer) {
+    String commandText = null;
+    try {
+      
+      if (channelBuffer == null) {
+        return commandText;
+      }
+      
+      if (channelBuffer.getUnsignedShort(0) > 0) {
+        return commandText;
+      }
+      
+      channelBuffer.skipBytes(4); // marker
+      long dataLength = channelBuffer.readUnsignedInt();
+      int codec = channelBuffer.readUnsignedByte();
+      int count = channelBuffer.readUnsignedByte();
+      
+      if (count < 1) {
+        return commandText;
+      }
+      
+      if (codec != 0x0C) {
+        return commandText;
+      }
+      
+      int keyType = channelBuffer.readUnsignedByte();
+      
+      commandText = channelBuffer.readBytes(channelBuffer.readInt()).toString(
+          StandardCharsets.US_ASCII);
+      
+    } catch (Exception e) {
+    }
+    return commandText;
   }
   
 }

@@ -17,17 +17,14 @@ import org.traccar.BaseProtocolForwarder;
 import org.traccar.GlobalChannelFactory;
 import org.traccar.helper.Log;
 
-public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
+public class G15cProtocolForwarder extends BaseProtocolForwarder {
   
   private final Object trafficLock = new Object();
   
-  private final boolean connectionLess;
   private volatile Channel outboundChannel;
   
-  public TeltonikaProtocolForwarder(TeltonikaProtocol protocol,
-      boolean connectionLess) {
+  public G15cProtocolForwarder(G15cProtocol protocol) {
     super(protocol);
-    this.connectionLess = connectionLess;
   }
   
   @Override
@@ -42,24 +39,17 @@ public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
       
       // log it
       Log.debug(headerLog
-          + "TeltonikaProtocolForwarder setup client bootstrap , with "
+          + "G15cProtocolForwarder setup client bootstrap , with "
           + ": handler = ForwarderOutboundHandler , remoteHost = "
-          + getRemoteHost() + " , remotePort = " + getRemotePort()
-          + " , connectionLess = " + connectionLess);
+          + getRemoteHost() + " , remotePort = " + getRemotePort());
       
       // setup client bootstrap
       ClientBootstrap clientBootstrap = new ClientBootstrap();
-      if (connectionLess) {
-        clientBootstrap.setFactory(GlobalChannelFactory.getDatagramFactory());
-      } else {
-        clientBootstrap.setFactory(GlobalChannelFactory.getClientFactory());
-      }
+      clientBootstrap.setFactory(GlobalChannelFactory.getClientFactory());
       
       // add forwarder outbound handler
-      clientBootstrap.getPipeline().addLast(
-          "teltonikaForwarderOutboundHandler",
-          new TeltonikaProtocolForwarderOutboundHandler(headerLog,
-              inboundChannel));
+      clientBootstrap.getPipeline().addLast("g15cForwarderOutboundHandler",
+          new G15cProtocolForwarderOutboundHandler(headerLog, inboundChannel));
       
       // connect to remote host
       ChannelFuture channelFuture = clientBootstrap
@@ -71,7 +61,7 @@ public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
       // validate the future connection
       channelFuture.addListener(new ChannelFutureListener() {
         public void operationComplete(ChannelFuture channelFuture) {
-          Log.debug(headerLog + "TeltonikaProtocolForwarder client bootstrap "
+          Log.debug(headerLog + "G15cProtocolForwarder client bootstrap "
               + "on operation complete : isSuccess = "
               + channelFuture.isSuccess());
           // resume incoming traffic because the client bootstrap
@@ -82,7 +72,7 @@ public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
       
     } catch (Exception e) {
       Log.warning(headerLog
-          + "TeltonikaProtocolForwarder failed channel connected , " + e);
+          + "G15cProtocolForwarder failed channel connected , " + e);
     }
   }
   
@@ -92,15 +82,14 @@ public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
     try {
       
       // log it
-      Log.debug(headerLog
-          + "TeltonikaProtocolForwarder closing outbound channel");
+      Log.debug(headerLog + "G15cProtocolForwarder closing outbound channel");
       
       // close on flush for outbound channel
       closeOnFlush(outboundChannel);
       
     } catch (Exception e) {
       Log.warning(headerLog
-          + "TeltonikaProtocolForwarder failed channel disconnected , " + e);
+          + "G15cProtocolForwarder failed channel disconnected , " + e);
     }
   }
   
@@ -113,7 +102,7 @@ public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
       
     } catch (Exception e) {
       Log.warning(headerLog
-          + "TeltonikaProtocolForwarder failed channel interest changed , " + e);
+          + "G15cProtocolForwarder failed channel interest changed , " + e);
     }
   }
   
@@ -122,16 +111,18 @@ public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
     boolean result = false;
     final String headerLog = headerLog(channel);
     try {
-      
-      // forward message
-      write(outboundChannel, channelBuffer);
-      
-      // result as true
-      result = true;
-      
+      synchronized (trafficLock) {
+        
+        // forward message
+        write(outboundChannel, channelBuffer);
+        
+        // result as true
+        result = true;
+        
+      }
     } catch (Exception e) {
-      Log.warning(headerLog
-          + "TeltonikaProtocolForwarder failed forward message , " + e);
+      Log.warning(headerLog + "G15cProtocolForwarder failed forward message , "
+          + e);
     }
     return result;
   }
@@ -140,25 +131,24 @@ public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
   protected void exceptionCaught(ExceptionEvent exceptionEvent, Channel channel) {
     final String headerLog = headerLog(channel);
     try {
-      
-      Log.debug(headerLog + "TeltonikaProtocolForwarder caught exception "
+      Log.debug(headerLog + "G15cProtocolForwarder caught exception "
           + exceptionEvent);
       
       // ...
       
     } catch (Exception e) {
       Log.warning(headerLog
-          + "TeltonikaProtocolForwarder failed exception caught , " + e);
+          + "G15cProtocolForwarder failed exception caught , " + e);
     }
   }
   
-  private class TeltonikaProtocolForwarderOutboundHandler extends
+  private class G15cProtocolForwarderOutboundHandler extends
       SimpleChannelUpstreamHandler {
     
     private final String headerLog;
     private final Channel inboundChannel;
     
-    public TeltonikaProtocolForwarderOutboundHandler(String headerLog,
+    public G15cProtocolForwarderOutboundHandler(String headerLog,
         Channel inboundChannel) {
       this.headerLog = headerLog;
       this.inboundChannel = inboundChannel;
@@ -168,7 +158,7 @@ public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
     public void channelConnected(ChannelHandlerContext channelHandlerContext,
         ChannelStateEvent channelStateEvent) throws Exception {
       Log.debug(headerLog
-          + "TeltonikaProtocolForwarderOutboundHandler channel connected");
+          + "G15cProtocolForwarderOutboundHandler channel connected");
     }
     
     @Override
@@ -177,17 +167,17 @@ public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
         ChannelStateEvent channelStateEvent) throws Exception {
       try {
         Log.debug(headerLog
-            + "TeltonikaProtocolForwarderOutboundHandler channel disconnected");
+            + "G15cProtocolForwarderOutboundHandler channel disconnected");
         
         Log.debug(headerLog
-            + "TeltonikaProtocolForwarderOutboundHandler closing inbound channel");
+            + "G15cProtocolForwarderOutboundHandler closing inbound channel");
         
         // close on flush for inbound channel
         closeOnFlush(inboundChannel);
         
       } catch (Exception e) {
         Log.warning(headerLog
-            + "TeltonikaProtocolForwarderOutboundHandler failed channel disconnected , "
+            + "G15cProtocolForwarderOutboundHandler failed channel disconnected , "
             + e);
       }
     }
@@ -196,26 +186,16 @@ public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
     public void messageReceived(ChannelHandlerContext channelHandlerContext,
         final MessageEvent messageEvent) {
       ChannelBuffer channelBuffer = (ChannelBuffer) messageEvent.getMessage();
+      
       Log.debug(headerLog
-          + "TeltonikaProtocolForwarderOutboundHandler message received : "
+          + "G15cProtocolForwarderOutboundHandler message received : "
           + ChannelBuffers.hexDump(channelBuffer));
       
-      // has command inside ?
-      
-      String commandText = TeltonikaProtocol.readCommandText(ChannelBuffers
-          .copiedBuffer(channelBuffer));
-      if ((commandText == null) || (commandText.equals(""))) {
-        return;
-      }
-      
-      // if found command than forward back to inbound channel
-      
       synchronized (trafficLock) {
-        Log.debug(headerLog
-            + "TeltonikaProtocolForwarderOutboundHandler forward command : "
-            + commandText);
+        
         // forward to inbound
         write(inboundChannel, ChannelBuffers.copiedBuffer(channelBuffer));
+        
       }
       
     }
@@ -224,17 +204,19 @@ public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
     public void channelInterestChanged(
         ChannelHandlerContext channelHandlerContext,
         ChannelStateEvent channelStateEvent) {
+      
       // ... nothing to do
+      
     }
     
     @Override
     public void exceptionCaught(ChannelHandlerContext channelHandlerContext,
         ExceptionEvent exceptionEvent) {
       Log.debug(headerLog
-          + "TeltonikaProtocolForwarderOutboundHandler caught exception "
+          + "G15cProtocolForwarderOutboundHandler caught exception "
           + exceptionEvent);
     }
     
-  } // private class TeltonikaProtocolForwarderOutboundHandler
+  } // private class G15cProtocolForwarderOutboundHandler
   
 }

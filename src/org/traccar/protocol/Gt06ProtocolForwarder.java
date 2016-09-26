@@ -19,6 +19,8 @@ import org.traccar.helper.Log;
 
 public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
   
+  private final Object trafficLock = new Object();
+  
   private volatile Channel outboundChannel;
   
   public Gt06ProtocolForwarder(Gt06Protocol protocol) {
@@ -47,7 +49,7 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
       
       // add forwarder outbound handler
       clientBootstrap.getPipeline().addLast("gt06ForwarderOutboundHandler",
-          new Gt06ProtocolForwarderOutboundHandler(headerLog));
+          new Gt06ProtocolForwarderOutboundHandler(headerLog, inboundChannel));
       
       // connect to remote host
       ChannelFuture channelFuture = clientBootstrap
@@ -96,6 +98,8 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
     final String headerLog = headerLog(channel);
     try {
       
+      // ...
+      
     } catch (Exception e) {
       Log.warning(headerLog
           + "Gt06ProtocolForwarder failed channel interest changed , " + e);
@@ -107,29 +111,15 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
     boolean result = false;
     final String headerLog = headerLog(channel);
     try {
-      
-      // is outbound channel exist ?
-      if (outboundChannel == null) {
-        Log.warning(headerLog
-            + "Gt06ProtocolForwarder failed to forward message "
-            + ", found null outbound channel");
-        return result;
+      synchronized (trafficLock) {
+        
+        // forward message
+        write(outboundChannel, channelBuffer);
+        
+        // result as true
+        result = true;
+        
       }
-      
-      // is outbound channel connected ?
-      if (!outboundChannel.isConnected()) {
-        Log.warning(headerLog
-            + "Gt06ProtocolForwarder failed to forward message "
-            + ", found disconnected outbound channel");
-        return result;
-      }
-      
-      // forward message
-      write(outboundChannel, channelBuffer);
-      
-      // result as true
-      result = true;
-      
     } catch (Exception e) {
       Log.warning(headerLog + "Gt06ProtocolForwarder failed forward message , "
           + e);
@@ -141,11 +131,10 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
   protected void exceptionCaught(ExceptionEvent exceptionEvent, Channel channel) {
     final String headerLog = headerLog(channel);
     try {
+      Log.debug(headerLog + "Gt06ProtocolForwarder caught exception "
+          + exceptionEvent);
       
-      Log.debug(headerLog + "Gt06ProtocolForwarder found exception "
-          + exceptionEvent + " , close it");
-      
-      closeOnFlush(channel);
+      // ...
       
     } catch (Exception e) {
       Log.warning(headerLog
@@ -157,9 +146,12 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
       SimpleChannelUpstreamHandler {
     
     private final String headerLog;
+    private final Channel inboundChannel;
     
-    public Gt06ProtocolForwarderOutboundHandler(String headerLog) {
+    public Gt06ProtocolForwarderOutboundHandler(String headerLog,
+        Channel inboundChannel) {
       this.headerLog = headerLog;
+      this.inboundChannel = inboundChannel;
     }
     
     @Override
@@ -173,66 +165,70 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
     public void channelDisconnected(
         ChannelHandlerContext channelHandlerContext,
         ChannelStateEvent channelStateEvent) throws Exception {
-      Log.debug(headerLog
-          + "Gt06ProtocolForwarderOutboundHandler channel disconnected");
+      try {
+        Log.debug(headerLog
+            + "Gt06ProtocolForwarderOutboundHandler channel disconnected");
+        
+        Log.debug(headerLog
+            + "Gt06ProtocolForwarderOutboundHandler closing inbound channel");
+        
+        // close on flush for inbound channel
+        closeOnFlush(inboundChannel);
+        
+      } catch (Exception e) {
+        Log.warning(headerLog
+            + "Gt06ProtocolForwarderOutboundHandler failed channel disconnected , "
+            + e);
+      }
     }
     
     @Override
     public void messageReceived(ChannelHandlerContext channelHandlerContext,
         final MessageEvent messageEvent) {
       ChannelBuffer channelBuffer = (ChannelBuffer) messageEvent.getMessage();
+      
       Log.debug(headerLog
           + "Gt06ProtocolForwarderOutboundHandler message received : "
           + ChannelBuffers.hexDump(channelBuffer));
+      
+      // has command inside ?
+      
+      String commandText = Gt06Protocol.readCommandText(ChannelBuffers
+          .copiedBuffer(channelBuffer));
+      if ((commandText == null) || (commandText.equals(""))) {
+        return;
+      }
+      
+      // if found command than forward back to inbound channel
+      
+      synchronized (trafficLock) {
+        
+        Log.debug(headerLog
+            + "Gt06ProtocolForwarderOutboundHandler forward command : "
+            + commandText);
+        
+        // forward to inbound
+        write(inboundChannel, ChannelBuffers.copiedBuffer(channelBuffer));
+        
+      }
+      
     }
     
     @Override
     public void channelInterestChanged(
         ChannelHandlerContext channelHandlerContext,
         ChannelStateEvent channelStateEvent) {
-      Log.debug(headerLog
-          + "Gt06ProtocolForwarderOutboundHandler channel interest changed");
+      // ... nothing to do
     }
     
     @Override
     public void exceptionCaught(ChannelHandlerContext channelHandlerContext,
         ExceptionEvent exceptionEvent) {
       Log.debug(headerLog
-          + "Gt06ProtocolForwarderOutboundHandler exception caught , "
+          + "Gt06ProtocolForwarderOutboundHandler caught exception "
           + exceptionEvent);
-      closeOnFlush(exceptionEvent.getChannel());
     }
     
-  } // private class ForwarderOutboundHandler
-  
-  private static ChannelFuture write(Channel channel,
-      ChannelBuffer channelBuffer) {
-    ChannelFuture channelFuture = null;
-    if (channel == null) {
-      return channelFuture;
-    }
-    if (!channel.isConnected()) {
-      return channelFuture;
-    }
-    if (channelBuffer == null) {
-      return channelFuture;
-    }
-    channelFuture = channel.write(channelBuffer);
-    return channelFuture;
-  }
-  
-  private static boolean closeOnFlush(Channel channel) {
-    boolean result = false;
-    if (channel == null) {
-      return result;
-    }
-    if (!channel.isConnected()) {
-      return result;
-    }
-    ChannelFuture channelFuture = channel.write(ChannelBuffers.EMPTY_BUFFER);
-    channelFuture.addListener(ChannelFutureListener.CLOSE);
-    result = true;
-    return result;
-  }
+  } // private class Gt06ProtocolForwarderOutboundHandler
   
 }

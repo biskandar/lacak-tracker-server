@@ -4,6 +4,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
@@ -89,6 +91,33 @@ public abstract class BaseProtocolForwarder implements ChannelUpstreamHandler {
     // store and forward , keep the original data as it is
     channelHandlerContext.sendUpstream(channelEvent);
     
+  }
+  
+  public ChannelFuture write(Channel channel, ChannelBuffer channelBuffer) {
+    ChannelFuture channelFuture = null;
+    if (channelBuffer == null) {
+      return channelFuture;
+    }
+    if (channel == null) {
+      return channelFuture;
+    }
+    if (!channel.isConnected()) {
+      return channelFuture;
+    }
+    channelFuture = channel.write(channelBuffer);
+    return channelFuture;
+  }
+  
+  public boolean closeOnFlush(Channel channel) {
+    boolean result = false;
+    // write empty buffer
+    ChannelFuture channelFuture = write(channel, ChannelBuffers.EMPTY_BUFFER);
+    if (channelFuture != null) {
+      // make sure the channel is cleaned than close it
+      channelFuture.addListener(ChannelFutureListener.CLOSE);
+    }
+    result = true;
+    return result;
   }
   
   private boolean stateMessage(ChannelHandlerContext channelHandlerContext,

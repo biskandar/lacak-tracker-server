@@ -65,6 +65,10 @@ public class ConnectionManager {
   
   public void addActiveDevice(long deviceId, Protocol protocol,
       Channel channel, SocketAddress remoteAddress) {
+    Log.debug("ConnectionManager add new active device : id = " + deviceId
+        + " , protocol = " + protocol.getName() + " , channel = "
+        + String.format("%08X", channel.getId()) + " , remoteAddress = "
+        + remoteAddress);
     activeDevices.put(deviceId, new ActiveDevice(deviceId, protocol, channel,
         remoteAddress));
   }
@@ -72,6 +76,9 @@ public class ConnectionManager {
   public void removeActiveDevice(Channel channel) {
     for (ActiveDevice activeDevice : activeDevices.values()) {
       if (activeDevice.getChannel() == channel) {
+        Log.debug("ConnectionManager remove active device : id = "
+            + activeDevice.getDeviceId() + " , channel = "
+            + String.format("%08X", channel.getId()));
         updateDevice(activeDevice.getDeviceId(), Device.STATUS_OFFLINE, null);
         activeDevices.remove(activeDevice.getDeviceId());
         break;

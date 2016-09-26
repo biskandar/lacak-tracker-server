@@ -25,7 +25,6 @@ import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.Context;
 import org.traccar.helper.BitUtil;
-import org.traccar.helper.Checksum;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.UnitsConverter;
 import org.traccar.model.Position;
@@ -42,66 +41,6 @@ public class Gt06ProtocolDecoder extends BaseProtocolDecoder {
       forceTimeZone = true;
       timeZone.setRawOffset(Context.getConfig().getInteger(
           getProtocolName() + ".timezone") * 1000);
-    }
-  }
-  
-  public static final int MSG_LOGIN = 0x01;
-  public static final int MSG_GPS = 0x10;
-  public static final int MSG_LBS = 0x11;
-  public static final int MSG_GPS_LBS_1 = 0x12;
-  public static final int MSG_GPS_LBS_2 = 0x22;
-  public static final int MSG_STATUS = 0x13;
-  public static final int MSG_SATELLITE = 0x14;
-  public static final int MSG_STRING = 0x15;
-  public static final int MSG_GPS_LBS_STATUS_1 = 0x16;
-  public static final int MSG_GPS_LBS_STATUS_2 = 0x26;
-  public static final int MSG_GPS_LBS_STATUS_3 = 0x27;
-  public static final int MSG_LBS_PHONE = 0x17;
-  public static final int MSG_LBS_EXTEND = 0x18;
-  public static final int MSG_LBS_STATUS = 0x19;
-  public static final int MSG_GPS_PHONE = 0x1A;
-  public static final int MSG_GPS_LBS_EXTEND = 0x1E;
-  public static final int MSG_COMMAND_0 = 0x80;
-  public static final int MSG_COMMAND_1 = 0x81;
-  public static final int MSG_COMMAND_2 = 0x82;
-  public static final int MSG_INFO = 0x94;
-  
-  private static boolean isSupported(int type) {
-    return hasGps(type) || hasLbs(type) || hasStatus(type);
-  }
-  
-  private static boolean hasGps(int type) {
-    return type == MSG_GPS || type == MSG_GPS_LBS_1 || type == MSG_GPS_LBS_2
-        || type == MSG_GPS_LBS_STATUS_1 || type == MSG_GPS_LBS_STATUS_2
-        || type == MSG_GPS_LBS_STATUS_3 || type == MSG_GPS_PHONE
-        || type == MSG_GPS_LBS_EXTEND;
-  }
-  
-  private static boolean hasLbs(int type) {
-    return type == MSG_LBS || type == MSG_LBS_STATUS || type == MSG_GPS_LBS_1
-        || type == MSG_GPS_LBS_2 || type == MSG_GPS_LBS_STATUS_1
-        || type == MSG_GPS_LBS_STATUS_2 || type == MSG_GPS_LBS_STATUS_3;
-  }
-  
-  private static boolean hasStatus(int type) {
-    return type == MSG_STATUS || type == MSG_LBS_STATUS
-        || type == MSG_GPS_LBS_STATUS_1 || type == MSG_GPS_LBS_STATUS_2
-        || type == MSG_GPS_LBS_STATUS_3;
-  }
-  
-  private static void sendResponse(Channel channel, int type, int index) {
-    if (channel != null) {
-      ChannelBuffer response = ChannelBuffers.dynamicBuffer();
-      response.writeByte(0x78);
-      response.writeByte(0x78); // header
-      response.writeByte(5); // size
-      response.writeByte(type);
-      response.writeShort(index);
-      response.writeShort(Checksum.crc16(Checksum.CRC16_X25,
-          response.toByteBuffer(2, 4)));
-      response.writeByte(0x0D);
-      response.writeByte(0x0A); // ending
-      channel.write(response);
     }
   }
   
@@ -186,7 +125,7 @@ public class Gt06ProtocolDecoder extends BaseProtocolDecoder {
       
       int type = buf.readUnsignedByte();
       
-      if (type == MSG_LOGIN) {
+      if (type == Gt06Protocol.MSG_LOGIN) {
         
         String imei = ChannelBuffers.hexDump(buf.readBytes(8)).substring(1);
         buf.readUnsignedShort(); // type
@@ -207,12 +146,13 @@ public class Gt06ProtocolDecoder extends BaseProtocolDecoder {
         
         if (identify(imei, channel, remoteAddress)) {
           buf.skipBytes(buf.readableBytes() - 6);
-          sendResponse(channel, type, buf.readUnsignedShort());
+          channel.write(Gt06Protocol.createResponse(type,
+              buf.readUnsignedShort()));
         }
         
       } else if (hasDeviceId()) {
         
-        if (type == MSG_STRING) {
+        if (type == Gt06Protocol.MSG_STRING) {
           
           Position position = new Position();
           position.setDeviceId(getDeviceId());
@@ -232,31 +172,33 @@ public class Gt06ProtocolDecoder extends BaseProtocolDecoder {
           
           buf.readUnsignedShort(); // language
           
-          sendResponse(channel, type, buf.readUnsignedShort());
+          channel.write(Gt06Protocol.createResponse(type,
+              buf.readUnsignedShort()));
           
           return position;
           
-        } else if (isSupported(type)) {
+        } else if (Gt06Protocol.isSupported(type)) {
           
           Position position = new Position();
           position.setDeviceId(getDeviceId());
           position.setProtocol(getProtocolName());
           
-          if (hasGps(type)) {
+          if (Gt06Protocol.hasGps(type)) {
             decodeGps(position, buf);
           } else {
             getLastLocation(position, null);
           }
           
-          if (hasLbs(type)) {
-            decodeLbs(position, buf, hasStatus(type));
+          if (Gt06Protocol.hasLbs(type)) {
+            decodeLbs(position, buf, Gt06Protocol.hasStatus(type));
           }
           
-          if (hasStatus(type)) {
+          if (Gt06Protocol.hasStatus(type)) {
             decodeStatus(position, buf);
           }
           
-          if (type == MSG_GPS_LBS_1 && buf.readableBytes() == 4 + 6) {
+          if (type == Gt06Protocol.MSG_GPS_LBS_1
+              && buf.readableBytes() == 4 + 6) {
             position.set(Position.KEY_ODOMETER, buf.readUnsignedInt());
           }
           
@@ -265,16 +207,18 @@ public class Gt06ProtocolDecoder extends BaseProtocolDecoder {
           }
           int index = buf.readUnsignedShort();
           position.set(Position.KEY_INDEX, index);
-          sendResponse(channel, type, index);
+          channel.write(Gt06Protocol.createResponse(type, index));
           
           return position;
           
         } else {
           
           buf.skipBytes(dataLength);
-          if (type != MSG_COMMAND_0 && type != MSG_COMMAND_1
-              && type != MSG_COMMAND_2) {
-            sendResponse(channel, type, buf.readUnsignedShort());
+          if (type != Gt06Protocol.MSG_COMMAND_0
+              && type != Gt06Protocol.MSG_COMMAND_1
+              && type != Gt06Protocol.MSG_COMMAND_2) {
+            channel.write(Gt06Protocol.createResponse(type,
+                buf.readUnsignedShort()));
           }
           
         }
@@ -286,7 +230,7 @@ public class Gt06ProtocolDecoder extends BaseProtocolDecoder {
       buf.readUnsignedShort(); // length
       int type = buf.readUnsignedByte();
       
-      if (type == MSG_INFO) {
+      if (type == Gt06Protocol.MSG_INFO) {
         int subType = buf.readUnsignedByte();
         
         if (subType == 0x05) {
@@ -311,5 +255,4 @@ public class Gt06ProtocolDecoder extends BaseProtocolDecoder {
     
     return null;
   }
-  
 }
