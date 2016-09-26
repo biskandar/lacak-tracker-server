@@ -30,6 +30,8 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.varia.NullAppender;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.logging.AbstractInternalLogger;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -143,6 +145,24 @@ public final class Log {
   
   public static void debug(String msg) {
     getLogger().debug(msg);
+  }
+  
+  public static String header(ChannelEvent channelEvent) {
+    String header = "";
+    if (channelEvent == null) {
+      return header;
+    }
+    header = header(channelEvent.getChannel());
+    return header;
+  }
+  
+  public static String header(Channel channel) {
+    String header = "";
+    if (channel == null) {
+      return header;
+    }
+    header = String.format("[%08X] ", channel.getId());
+    return header;
   }
   
   public static String exceptionStack(Throwable exception) {

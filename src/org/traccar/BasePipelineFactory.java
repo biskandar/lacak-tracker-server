@@ -197,8 +197,22 @@ public abstract class BasePipelineFactory implements ChannelPipelineFactory {
     }
     
     if (Context.getConfig().getBoolean("forward.enable")) {
-      pipeline.addLast("webHandler", new WebDataHandler(Context.getConfig()
-          .getString("forward.url")));
+      String forwardUrl = Context.getConfig().getString("forward.url");
+      pipeline.addLast("webHandler", new WebDataHandler(forwardUrl));
+    }
+    
+    if (Context.getConfig().getBoolean("forward.splunk.enable")) {
+      String forwardSplunkUrl = Context.getConfig().getString(
+          "forward.splunk.url");
+      String forwardSplunkToken = Context.getConfig().getString(
+          "forward.splunk.token");
+      String host = Context.getConfig().getString("forward.splunk.host");
+      String source = Context.getConfig().getString("forward.splunk.source");
+      String sourceType = Context.getConfig().getString(
+          "forward.splunk.sourcetype");
+      String index = Context.getConfig().getString("forward.splunk.index");
+      pipeline.addLast("splunkHandler", new SplunkDataHandler(forwardSplunkUrl,
+          forwardSplunkToken, host, source, sourceType, index));
     }
     
     if (commandResultEventHandler != null) {
@@ -236,4 +250,5 @@ public abstract class BasePipelineFactory implements ChannelPipelineFactory {
       }
     }
   }
+  
 }

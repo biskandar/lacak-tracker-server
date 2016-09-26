@@ -17,12 +17,15 @@ import org.traccar.BaseProtocolForwarder;
 import org.traccar.GlobalChannelFactory;
 import org.traccar.helper.Log;
 
-public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
+public class TeltonikaProtocolForwarder extends BaseProtocolForwarder {
   
+  private final boolean connectionLess;
   private volatile Channel outboundChannel;
   
-  public Gt06ProtocolForwarder(Gt06Protocol protocol) {
+  public TeltonikaProtocolForwarder(TeltonikaProtocol protocol,
+      boolean connectionLess) {
     super(protocol);
+    this.connectionLess = connectionLess;
   }
   
   @Override
@@ -37,17 +40,23 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
       
       // log it
       Log.debug(headerLog
-          + "Gt06ProtocolForwarder setup client bootstrap , with "
+          + "TeltonikaProtocolForwarder setup client bootstrap , with "
           + ": handler = ForwarderOutboundHandler , remoteHost = "
-          + getRemoteHost() + " , remotePort = " + getRemotePort());
+          + getRemoteHost() + " , remotePort = " + getRemotePort()
+          + " , connectionLess = " + connectionLess);
       
       // setup client bootstrap
       ClientBootstrap clientBootstrap = new ClientBootstrap();
-      clientBootstrap.setFactory(GlobalChannelFactory.getClientFactory());
+      if (connectionLess) {
+        clientBootstrap.setFactory(GlobalChannelFactory.getDatagramFactory());
+      } else {
+        clientBootstrap.setFactory(GlobalChannelFactory.getClientFactory());
+      }
       
       // add forwarder outbound handler
-      clientBootstrap.getPipeline().addLast("gt06ForwarderOutboundHandler",
-          new Gt06ProtocolForwarderOutboundHandler(headerLog));
+      clientBootstrap.getPipeline().addLast(
+          "teltonikaForwarderOutboundHandler",
+          new TeltonikaProtocolForwarderOutboundHandler(headerLog));
       
       // connect to remote host
       ChannelFuture channelFuture = clientBootstrap
@@ -59,7 +68,7 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
       // validate the future connection
       channelFuture.addListener(new ChannelFutureListener() {
         public void operationComplete(ChannelFuture channelFuture) {
-          Log.debug(headerLog + "Gt06ProtocolForwarder client bootstrap "
+          Log.debug(headerLog + "TeltonikaProtocolForwarder client bootstrap "
               + "on operation complete : isSuccess = "
               + channelFuture.isSuccess());
           // resume incoming traffic because the client bootstrap
@@ -70,7 +79,7 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
       
     } catch (Exception e) {
       Log.warning(headerLog
-          + "Gt06ProtocolForwarder failed channel connected , " + e);
+          + "TeltonikaProtocolForwarder failed channel connected , " + e);
     }
   }
   
@@ -80,14 +89,15 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
     try {
       
       // log it
-      Log.debug(headerLog + "Gt06ProtocolForwarder closing outbound channel");
+      Log.debug(headerLog
+          + "TeltonikaProtocolForwarder closing outbound channel");
       
       // close on flush for outbound channel
       closeOnFlush(outboundChannel);
       
     } catch (Exception e) {
       Log.warning(headerLog
-          + "Gt06ProtocolForwarder failed channel disconnected , " + e);
+          + "TeltonikaProtocolForwarder failed channel disconnected , " + e);
     }
   }
   
@@ -98,7 +108,7 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
       
     } catch (Exception e) {
       Log.warning(headerLog
-          + "Gt06ProtocolForwarder failed channel interest changed , " + e);
+          + "TeltonikaProtocolForwarder failed channel interest changed , " + e);
     }
   }
   
@@ -111,7 +121,7 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
       // is outbound channel exist ?
       if (outboundChannel == null) {
         Log.warning(headerLog
-            + "Gt06ProtocolForwarder failed to forward message "
+            + "TeltonikaProtocolForwarder failed to forward message "
             + ", found null outbound channel");
         return result;
       }
@@ -119,7 +129,7 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
       // is outbound channel connected ?
       if (!outboundChannel.isConnected()) {
         Log.warning(headerLog
-            + "Gt06ProtocolForwarder failed to forward message "
+            + "TeltonikaProtocolForwarder failed to forward message "
             + ", found disconnected outbound channel");
         return result;
       }
@@ -131,8 +141,8 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
       result = true;
       
     } catch (Exception e) {
-      Log.warning(headerLog + "Gt06ProtocolForwarder failed forward message , "
-          + e);
+      Log.warning(headerLog
+          + "TeltonikaProtocolForwarder failed forward message , " + e);
     }
     return result;
   }
@@ -142,23 +152,23 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
     final String headerLog = headerLog(channel);
     try {
       
-      Log.debug(headerLog + "Gt06ProtocolForwarder found exception "
+      Log.debug(headerLog + "TeltonikaProtocolForwarder found exception "
           + exceptionEvent + " , close it");
       
       closeOnFlush(channel);
       
     } catch (Exception e) {
       Log.warning(headerLog
-          + "Gt06ProtocolForwarder failed exception caught , " + e);
+          + "TeltonikaProtocolForwarder failed exception caught , " + e);
     }
   }
   
-  private class Gt06ProtocolForwarderOutboundHandler extends
+  private class TeltonikaProtocolForwarderOutboundHandler extends
       SimpleChannelUpstreamHandler {
     
     private final String headerLog;
     
-    public Gt06ProtocolForwarderOutboundHandler(String headerLog) {
+    public TeltonikaProtocolForwarderOutboundHandler(String headerLog) {
       this.headerLog = headerLog;
     }
     
@@ -166,7 +176,7 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
     public void channelConnected(ChannelHandlerContext channelHandlerContext,
         ChannelStateEvent channelStateEvent) throws Exception {
       Log.debug(headerLog
-          + "Gt06ProtocolForwarderOutboundHandler channel connected");
+          + "TeltonikaProtocolForwarderOutboundHandler channel connected");
     }
     
     @Override
@@ -174,7 +184,7 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
         ChannelHandlerContext channelHandlerContext,
         ChannelStateEvent channelStateEvent) throws Exception {
       Log.debug(headerLog
-          + "Gt06ProtocolForwarderOutboundHandler channel disconnected");
+          + "TeltonikaProtocolForwarderOutboundHandler channel disconnected");
     }
     
     @Override
@@ -182,7 +192,7 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
         final MessageEvent messageEvent) {
       ChannelBuffer channelBuffer = (ChannelBuffer) messageEvent.getMessage();
       Log.debug(headerLog
-          + "Gt06ProtocolForwarderOutboundHandler message received : "
+          + "TeltonikaProtocolForwarderOutboundHandler message received : "
           + ChannelBuffers.hexDump(channelBuffer));
     }
     
@@ -191,14 +201,14 @@ public class Gt06ProtocolForwarder extends BaseProtocolForwarder {
         ChannelHandlerContext channelHandlerContext,
         ChannelStateEvent channelStateEvent) {
       Log.debug(headerLog
-          + "Gt06ProtocolForwarderOutboundHandler channel interest changed");
+          + "TeltonikaProtocolForwarderOutboundHandler channel interest changed");
     }
     
     @Override
     public void exceptionCaught(ChannelHandlerContext channelHandlerContext,
         ExceptionEvent exceptionEvent) {
       Log.debug(headerLog
-          + "Gt06ProtocolForwarderOutboundHandler exception caught , "
+          + "TeltonikaProtocolForwarderOutboundHandler exception caught , "
           + exceptionEvent);
       closeOnFlush(exceptionEvent.getChannel());
     }

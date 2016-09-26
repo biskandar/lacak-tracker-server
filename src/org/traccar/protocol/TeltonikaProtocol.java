@@ -31,22 +31,29 @@ public class TeltonikaProtocol extends BaseProtocol {
   
   @Override
   public void initTrackerServers(List<TrackerServer> serverList) {
+    
     serverList.add(new TrackerServer(new ServerBootstrap(), this.getName()) {
       @Override
       protected void addSpecificHandlers(ChannelPipeline pipeline) {
+        pipeline.addLast("objectForwarder", new TeltonikaProtocolForwarder(
+            TeltonikaProtocol.this, false));
         pipeline.addLast("frameDecoder", new TeltonikaFrameDecoder());
         pipeline.addLast("objectDecoder", new TeltonikaProtocolDecoder(
             TeltonikaProtocol.this));
       }
     });
+    
     serverList.add(new TrackerServer(new ConnectionlessBootstrap(), this
         .getName()) {
       @Override
       protected void addSpecificHandlers(ChannelPipeline pipeline) {
+        pipeline.addLast("objectForwarder", new TeltonikaProtocolForwarder(
+            TeltonikaProtocol.this, true));
         pipeline.addLast("objectDecoder", new TeltonikaProtocolDecoder(
             TeltonikaProtocol.this));
       }
     });
+    
   }
   
 }

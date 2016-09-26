@@ -29,6 +29,9 @@ import org.traccar.model.Device;
 import org.traccar.model.MiscFormatter;
 import org.traccar.model.Position;
 
+import com.ning.http.client.AsyncCompletionHandler;
+import com.ning.http.client.Response;
+
 public class WebDataHandler extends BaseDataHandler {
   
   private final String url;
@@ -144,7 +147,24 @@ public class WebDataHandler extends BaseDataHandler {
   @Override
   protected Position handlePosition(Position position) {
     
-    Context.getAsyncHttpClient().prepareGet(formatRequest(position)).execute();
+    final String url = formatRequest(position);
+    
+    Context.getAsyncHttpClient().prepareGet(url)
+        .execute(new AsyncCompletionHandler<Response>() {
+          @Override
+          public Response onCompleted(Response response) throws Exception {
+            Log.debug("[WebDataHandler] Handled position : request.url = "
+                + url + " , response.statusCode = " + response.getStatusCode()
+                + " , response.body = " + response.getResponseBody());
+            return response;
+          }
+          
+          @Override
+          public void onThrowable(Throwable throwable) {
+            Log.debug("[WebDataHandler] Handled position : request.url = "
+                + url + " , throwable = " + throwable);
+          }
+        });
     
     return position;
   }

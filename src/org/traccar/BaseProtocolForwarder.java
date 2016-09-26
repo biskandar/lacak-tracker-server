@@ -33,7 +33,7 @@ public abstract class BaseProtocolForwarder implements ChannelUpstreamHandler {
   public BaseProtocolForwarder(Protocol protocol) {
     this.protocol = protocol;
     
-    String headerLog = "[" + getProtocolName() + "] ";
+    String headerLog = headerLog(null);
     
     String keyPrefix = getProtocolName().concat(".forward");
     
@@ -56,7 +56,7 @@ public abstract class BaseProtocolForwarder implements ChannelUpstreamHandler {
       ChannelEvent channelEvent) throws Exception {
     
     // header log
-    String headerLog = "[" + getProtocolName() + "] ";
+    String headerLog = headerLog(channelEvent.getChannel());
     
     // make sure forwarder only works if remote properties are assigned
     if (remoteHost == null) {
@@ -94,7 +94,7 @@ public abstract class BaseProtocolForwarder implements ChannelUpstreamHandler {
   private boolean stateMessage(ChannelHandlerContext channelHandlerContext,
       ChannelStateEvent channelStateEvent) {
     boolean result = false;
-    String headerLog = "[" + getProtocolName() + "] ";
+    String headerLog = headerLog(channelStateEvent.getChannel());
     switch (channelStateEvent.getState()) {
     case OPEN:
       if (Boolean.TRUE.equals(channelStateEvent.getValue())) {
@@ -139,8 +139,7 @@ public abstract class BaseProtocolForwarder implements ChannelUpstreamHandler {
     
     // there shall be forwarder
     
-    String headerLog = "[" + getProtocolName() + "-"
-        + messageEvent.getRemoteAddress() + "] ";
+    String headerLog = headerLog(messageEvent.getChannel());
     
     Object objectMessage = messageEvent.getMessage();
     if (objectMessage == null) {
@@ -171,6 +170,15 @@ public abstract class BaseProtocolForwarder implements ChannelUpstreamHandler {
     result = forwardMessage(messageEvent.getChannel(), channelBufferNew);
     
     return result;
+  }
+  
+  protected String headerLog(Channel channel) {
+    String headerLog = "";
+    if (channel != null) {
+      headerLog = headerLog.concat(Log.header(channel));
+    }
+    headerLog = headerLog.concat("[").concat(getProtocolName()).concat("] ");
+    return headerLog;
   }
   
   protected abstract void channelConnected(Channel channel);
