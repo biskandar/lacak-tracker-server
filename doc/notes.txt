@@ -1,0 +1,40 @@
+Step 1. Change database 
+
+  https://www.traccar.org/mysql/
+  
+  ./conf/traccar.xml
+
+    <entry key='web.path'>C:/benny.iskandar/work/traccar/web</entry>
+    <entry key='web.debug'>true</entry>
+    <entry key='web.console'>true</entry>
+  
+    <entry key='logger.enable'>true</entry>
+    <entry key='logger.level'>all</entry>
+    <entry key='logger.file'>C:/benny.iskandar/work/traccar/logs/traccar.log</entry>
+    
+    <entry key='database.driver'>com.mysql.jdbc.Driver</entry>
+    <entry key='database.url'>jdbc:mysql://localhost:3306/traccar?allowMultiQueries=true&amp;autoReconnect=true&amp;useUnicode=yes&amp;characterEncoding=UTF-8&amp;sessionVariables=sql_mode=ANSI_QUOTES</entry>
+    <entry key='database.user'>benny</entry>
+    <entry key='database.password'>benny1235</entry>
+    
+    <entry key='database.changelog'>C:/benny.iskandar/work/traccar/schema/changelog-master.xml</entry>
+
+
+Step 2. Put log for more information
+
+    2016-09-05 09:28:15  INFO: Version: null
+    Ignore this code , not a big deal only to show jar implementation version
+
+Step 3. Add feature like gt06.forward to another gt06 server
+
+  ./conf/traccar.xml
+  
+    <entry key='gt06.port'>5023</entry>
+    <entry key='gt06.forward.enable'>false</entry>
+    <entry key='gt06.forward.remote-server'>localhost</entry>
+    <entry key='gt06.forward.remote-port'>50231</entry>
+
+Step 4. 
+
+
+Step 5. 

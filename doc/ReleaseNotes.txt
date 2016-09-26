@@ -1,0 +1,74 @@
+v3.6.02
+
+  - Create new protocol G15C , for the first time just set as proxy
+  
+  - Teltonika commands 
+  
+      2016-09-17 11:11:18 DEBUG: [E9CB3AF7] [teltonika] TeltonikaProtocolForwarderOutboundHandler message received : 00000000000000170c01050000000f736574706172616d203130303220300100000b2d
+      
+      00000000000000170c01050000000f736574706172616d203130303220300100000b2d
+
+  - Add feature to send command to specific protocol thru third party application
+    via proxy / store and forward mechanism
+  
+  - Found bug exception caught
+    
+    2016-09-16 22:36:15 DEBUG: [4267BBA1: 5023 > 114.127.245.7] HEX: 7878051302d01d450d0a
+    2016-09-16 22:36:15  INFO: [4267BBA1] id: 358899058336325, time: 2016-09-16 21:16:15, lat: -3.55105, lon: 114.73181, speed: 0.0, course:192.0
+    2016-09-16 22:36:16 DEBUG: [4267BBA1] [gt06] Gt06ProtocolForwarderOutboundHandler message received : 7878051302d01d450d0a
+    2016-09-16 22:38:17 DEBUG: [4267BBA1] [gt06] Gt06ProtocolForwarderOutboundHandler channel disconnected
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] BaseProtocolForwarder caught [id: 0x4267bba1, /114.127.245.7:51472 => /103.31.226.4:5023] 
+      EXCEPTION: java.io.IOException: Connection reset by peer
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] Gt06ProtocolForwarder found exception [id: 0x4267bba1, /114.127.245.7:51472 => /103.31.226.4:5023] 
+      EXCEPTION: java.io.IOException: Connection reset by peer , close it
+    2016-09-16 22:38:27 DEBUG: [4267BBA1: 5023 > 114.127.245.7] HEX:
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] BaseProtocolForwarder do channel disconnected
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] Gt06ProtocolForwarder closing outbound channel
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] Gt06ProtocolForwarderOutboundHandler exception caught , [id: 0x9a632d99, /103.31.226.4:39722 :> tracker.navixy.com/217.23.132.215:47755] EXCEPTION: java.nio.channels.ClosedChannelException
+    2016-09-16 22:38:27  INFO: [4267BBA1] disconnected
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] Gt06ProtocolForwarderOutboundHandler exception caught , [id: 0x9a632d99, /103.31.226.4:39722 :> tracker.navixy.com/217.23.132.215:47755] EXCEPTION: java.nio.channels.ClosedChannelException
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] Gt06ProtocolForwarderOutboundHandler exception caught , [id: 0x9a632d99, /103.31.226.4:39722 :> tracker.navixy.com/217.23.132.215:47755] EXCEPTION: java.nio.channels.ClosedChannelException
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] BaseProtocolForwarder do channel unbound
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] Gt06ProtocolForwarderOutboundHandler exception caught , [id: 0x9a632d99, /103.31.226.4:39722 :> tracker.navixy.com/217.23.132.215:47755] EXCEPTION: java.nio.channels.ClosedChannelException
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] Gt06ProtocolForwarderOutboundHandler exception caught , [id: 0x9a632d99, /103.31.226.4:39722 :> tracker.navixy.com/217.23.132.215:47755] EXCEPTION: java.nio.channels.ClosedChannelException
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] BaseProtocolForwarder do channel closed
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] Gt06ProtocolForwarderOutboundHandler exception caught , [id: 0x9a632d99, /103.31.226.4:39722 :> tracker.navixy.com/217.23.132.215:47755] EXCEPTION: java.nio.channels.ClosedChannelException
+    2016-09-16 22:38:27 DEBUG: [4267BBA1] [gt06] Gt06ProtocolForwarderOutboundHandler exception caught , [id: 0x9a632d99, /103.31.226.4:39722 :> tracker.navixy.com/217.23.132.215:47755] EXCEPTION: java.nio.channels.ClosedChannelException
+    2016-09-16 22:38:27  WARN: [4267BBA1] error - Connection reset by peer - IOException (...)  
+    
+v3.6.01
+
+  - Add feature to support forward ke teltonika
+
+  - Clean up the log file to use message id from connected .
+
+  - Change the base map layer by using mapbox ?
+  
+    Google Street Map Url http://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga
+  
+    Token pk.eyJ1IjoibGFjYWtpbyIsImEiOiJjaXQxdTVnaXAwcnNhMnBxcG43ZGdxbmxjIn0.Us3m6J7H5zF-b4zJEqdCYA
+    
+    https://api.mapbox.com/v4/mapbox.streets/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibGFjYWtpbyIsImEiOiJjaXQxdTVnaXAwcnNhMnBxcG43ZGdxbmxjIn0.Us3m6J7H5zF-b4zJEqdCYA
+  
+    https://www.mapbox.com/api-documentation/?language=cURL#maps
+  
+      https://api.mapbox.com/v4/{map_id}/{z}/{x}/{y}.png?access_token=your-access-token
+      https://api.mapbox.com/v4/mapbox.streets/{z}/{x}/{y}.png?access_token=your-access-token
+
+  - Add feature to forward to splunk
+  
+  - Sample request 
+  
+      HTTP POST https://ax3.djak.co:8088/services/collector
+      Authorization : Splunk 5315B6DF-9A6C-4DF3-9B5E-7911FA402071
+      Content-Type : application/json
+      { "event" : {"index":340,"protocol":"gt06","speed":"0.0","status":4,"altitude":"0.0","ignition":false,"gsm":4,"ip":"114.127.245.8","id":"358899050857914","course":"99.0","alarm":true,"power":6,"longitude":"106.88215111111111","latitude":"-6.175479444444444"} }
+
+v3.6.00
+
+  - Initialized release from traccar 3.6
+  
+  - Add feature to support store and foward mechanism
+    . using protocol gt06
+  
+  - 
